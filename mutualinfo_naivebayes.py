@@ -18,7 +18,7 @@ def reduce_dims(data: pd.DataFrame, labels: pd.DataFrame) -> np.ndarray:
 
     X = data.to_numpy()
     y = labels.to_numpy()
-    mi_scores = mutual_info_classif(X, y)
+    mi_scores = mutual_info_classif(X, np.ravel(y))
     mi_score_selected_index = np.where(mi_scores > 0.2)[0]
     reduced = X[:,mi_score_selected_index]
     return reduced
@@ -28,7 +28,7 @@ def train_classifier(data: np.ndarray, labels: np.ndarray) -> None:
     label_encoder = preprocessing.OrdinalEncoder()
     enc_labels = label_encoder.fit_transform(labels)
     gnb = GaussianNB()
-    gnb.fit(data, enc_labels)
+    gnb.fit(data, np.ravel(enc_labels))
 
     train_acc = gnb.score(data, enc_labels)
     print(f'Accuracy on training data: {train_acc}')
