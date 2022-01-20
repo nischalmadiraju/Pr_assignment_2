@@ -2,6 +2,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+from sklearn.cluster import KMeans
 from sklearn.naive_bayes import GaussianNB
 from sklearn import preprocessing
 from sklearn.feature_selection import mutual_info_classif
@@ -33,13 +34,21 @@ def train_classifier(data: np.ndarray, labels: np.ndarray) -> None:
     train_acc = gnb.score(data, enc_labels)
     print(f'Accuracy on training data: {train_acc}')
 
+def kmeans(data: pd.DataFrame):
+    kmeans = KMeans(n_clusters=2, random_state=0).fit(data)
+    return kmeans
+
 
 def main():
     print('Loading data')
     data, labels = load_data()
+    kmeans_org_data = kmeans(data)
+    print('Kmeans of org data centres: ', kmeans_org_data)
     print('Reducing dims')
     reduced = reduce_dims(data, labels)
     print('Training classifier')
+    kmeans_reduced_data = kmeans(reduced)
+    print('Kmeans of reduces data centres: ', kmeans_reduced_data)
     train_classifier(reduced, labels)
 
 
