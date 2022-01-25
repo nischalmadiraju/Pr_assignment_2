@@ -2,9 +2,9 @@ import argparse
 from pprint import pprint
 from typing import Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from sklearn import decomposition, feature_selection, preprocessing, svm, naive_bayes, cluster, metrics, model_selection
 from sklearn.metrics import make_scorer
 
@@ -48,6 +48,11 @@ grid_options = {
 def load_data() -> Tuple[np.ndarray, np.ndarray]:
     data = pd.read_csv('data.csv', index_col=0)
     labels = pd.read_csv('labels.csv', index_col=0)
+
+    print('Data shape', data.shape)
+
+    labels['Class'].value_counts().plot(title='Items per class', rot=0, kind='bar')
+    plt.show()
 
     return data.to_numpy(), labels.to_numpy()
 
