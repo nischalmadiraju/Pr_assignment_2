@@ -4,6 +4,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn import decomposition, feature_selection, preprocessing, svm, naive_bayes, cluster, metrics, model_selection
 from sklearn.metrics import make_scorer
 
@@ -61,7 +62,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def kmeans(x: np.ndarray, y: np.ndarray) -> float:
-    y_pred = cluster.KMeans(n_clusters=2, random_state=0).fit_predict(x)
+    kmeans = cluster.KMeans(n_clusters=2, random_state=0)
+    y_pred = kmeans.fit_predict(x)
+    # Put the result into a color plot
+    plt.scatter(x[y_pred == 0, 0], x[y_pred == 0, 1], s=100, c='red', label='Cluster 1')
+    plt.scatter(x[y_pred == 1, 0], x[y_pred == 1, 1], s=100, c='blue', label='Cluster 2')
+    plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], s=300, c='yellow', label='Centroids')
+    plt.show()
     return metrics.mutual_info_score(y, y_pred)
 
 
