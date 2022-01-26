@@ -65,6 +65,8 @@ def main():
     print('Loading data')
     data = pd.read_csv('creditcard.csv')
 
+    print(data['Class'].value_counts())
+
     results = []
     for i in range(100):
         print(f'Running experiment {i}')
