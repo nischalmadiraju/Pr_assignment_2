@@ -18,8 +18,12 @@ from sklearn.neighbors import NearestNeighbors
 from Feature_extraction_pipeline import edge_detection, fourier_transform
 
 
-def create_dictionary(X_train):
-    dictionary = np.zeros((1700, 128), dtype=int)
+def create_dictionary(X_train, k_fold):
+    if k_fold == 0:
+        dictionary = np.zeros((1270, 128), dtype=int)
+    else:
+        dictionary = np.zeros((1140, 128), dtype=int)
+
     sift = cv2.SIFT_create(10)
     idx = 0
     for image in X_train:
@@ -82,7 +86,7 @@ def do_classification(X_train, y_train, X_test, y_test, model):
         randomForest.fit(X_train, y_train)
         randomForestPredictions = randomForest.predict(X_test)
         accuracy = metrics.accuracy_score(y_test, randomForestPredictions)
-    elif model == 2:  # Add logistic regression here
+    elif model == 2:
         logisticRegression = LogisticRegression(multi_class='multinomial', solver='lbfgs', max_iter=10000)
         logisticRegression.fit(X_train, y_train)
         logisticRegressionPredictions = logisticRegression.predict(X_test)
@@ -99,7 +103,7 @@ if __name__ == "__main__":
 
     clustering = 0          # 1 for clustering, 0 for no clustering
     k_fold = 1              # 1 for k-fold cross-validation, 0 for train-test-split
-    featureExtraction = 1   # 0 for no feature extraction, 1 for SIFT, 2 for Fourier Transform
+    featureExtraction = 2   # 0 for no feature extraction, 1 for SIFT, 2 for Fourier Transform
 
     silhouette = 1
     idx = 0
@@ -167,26 +171,27 @@ if __name__ == "__main__":
             X_train, X_test = dataImages[train_index], dataImages[test_index]
             y_train, y_test = dataLabels[train_index], dataLabels[test_index]
 
-            #  Create keypoint dictionary (10 keypoints per image) using only the training data
-            dictionary = create_dictionary(X_train)
+            if featureExtraction == 1:
+                #  Create keypoint dictionary (10 keypoints per image) using only the training data
+                dictionary = create_dictionary(X_train, k_fold)
 
-            # Calculate feature vectors for the training and testing data
-            X_train, X_test = calculate_feature_vectors(X_train, X_test)
+                # Calculate feature vectors for the training and testing data
+                X_train, X_test = calculate_feature_vectors(X_train, X_test)
 
             # Classification
             KNNAccuracy += do_classification(X_train, y_train, X_test, y_test, 0)
             randomForestAccuracy += do_classification(X_train, y_train, X_test, y_test, 1)
             logisticRegressionAccuracy += do_classification(X_train, y_train, X_test, y_test, 2)
 
-            print("Mean accuracy for KNN:", KNNAccuracy/3)
-            print("Mean accuracy for Random Forest:", randomForestAccuracy/3)
-            print("Mean accuracy for Logistic Regression:", logisticRegressionAccuracy/3)
+        print("Mean accuracy for KNN:", KNNAccuracy/3)
+        print("Mean accuracy for Random Forest:", randomForestAccuracy/3)
+        print("Mean accuracy for Logistic Regression:", logisticRegressionAccuracy/3)
                 
     else:
         X_train, X_test, y_train, y_test = train_test_split(dataImages, dataLabels, random_state=9)
 
         if featureExtraction == 1:
-            dictionary = create_dictionary(X_train)  # Create keypoint dictionary using only the training data
+            dictionary = create_dictionary(X_train, k_fold)  # Create keypoint dictionary using only the training data
             X_train, X_test = calculate_feature_vectors(X_train, X_test) # Calculate feature vectors
 
         # Classification
