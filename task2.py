@@ -28,10 +28,10 @@ def evaluate_model(model: Any, x_train: np.ndarray, y_train: np.ndarray, x_test:
 
 
 def run_experiment(x_train_lab: np.ndarray, x_train_unlab: np.ndarray, y_train_lab: np.ndarray, x_test: np.ndarray,
-                   y_test: np.ndarray) -> None:
+                   y_test: np.ndarray) -> Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]]:
     print('Baseline model')
     baseline = svm.SVC()
-    evaluate_model(baseline, x_train_lab, y_train_lab, x_test, y_test)
+    baseline_result = evaluate_model(baseline, x_train_lab, y_train_lab, x_test, y_test)
 
     # Same as previous x_train, but shuffled by train_test_split
     x_train = np.concatenate((x_train_lab, x_train_unlab))
@@ -39,14 +39,16 @@ def run_experiment(x_train_lab: np.ndarray, x_train_unlab: np.ndarray, y_train_l
 
     print('Semi-supervised')
     semi_model = semi_supervised.LabelPropagation(kernel='knn', n_jobs=-1)
-    evaluate_model(semi_model, x_train, y_train_combined, x_test, y_test)
+    semi_result = evaluate_model(semi_model, x_train, y_train_combined, x_test, y_test)
 
     # TODO is this correct?
     y_train = semi_model.transduction_
 
     print('Baseline with complete dataset')
     baseline_complete = svm.SVC()
-    evaluate_model(baseline_complete, x_train, y_train, x_test, y_test)
+    baseline_complete_result = evaluate_model(baseline_complete, x_train, y_train, x_test, y_test)
+
+    return baseline_result, semi_result, baseline_complete_result
 
 
 def main():
@@ -57,10 +59,16 @@ def main():
     x_train_lab, x_train_unlab, y_train_lab, _ = model_selection.train_test_split(x_train, y_train, test_size=.7,
                                                                                   stratify=y_train)
 
+    results = []
     for i in range(10):
         print(f'Running experiment {i}')
-        run_experiment(x_train_lab, x_train_unlab, y_train_lab, x_test, y_test)
+        results.append(run_experiment(x_train_lab, x_train_unlab, y_train_lab, x_test, y_test))
+        print('results so far:')
+        print(results)
         print('\n' * 2)
+
+    print('All results:')
+    print(results)
 
 
 if __name__ == '__main__':
