@@ -1,4 +1,5 @@
 import argparse
+import operator
 from pprint import pprint
 from typing import Tuple
 
@@ -7,6 +8,9 @@ import numpy as np
 import pandas as pd
 from sklearn import decomposition, feature_selection, preprocessing, svm, naive_bayes, cluster, metrics, model_selection
 from sklearn.metrics import make_scorer
+
+# Set seed for reproducible modeling
+np.random.seed(42)
 
 
 def pca(data: np.ndarray, *_) -> np.ndarray:
@@ -87,31 +91,45 @@ def main():
     enc_labels = label_encoder.fit_transform(labels)
     enc_labels = np.ravel(enc_labels)
 
-    print('Original clusters MI', kmeans(data, enc_labels))
+    print(f'Original clusters MI = {kmeans(data, enc_labels):.3f}')
 
     print('Reducing dims using', args.reduce_dims)
     reduced = reduce_dims_options[args.reduce_dims](data, enc_labels)
 
-    print('Reduced clusters MI', kmeans(reduced, enc_labels))
+    print(f'Reduced clusters MI = {kmeans(reduced, enc_labels):.3f}')
 
     x_train, x_test, y_train, y_test = model_selection.train_test_split(reduced, enc_labels, test_size=.2)
 
     print('Training classifier', args.classifier)
-    model = classifier_options[args.classifier]()
 
+    final_model = None
     if args.grid_search:
+        model = classifier_options[args.classifier]()
         print('Performing grid search')
         params = grid_options[args.classifier]
 
         # Automatically uses KFold CV
         grid = model_selection.GridSearchCV(model, params, scoring=make_scorer(compute_f1))
-        model = grid.fit(x_train, y_train)
+        final_model = grid.fit(x_train, y_train)
         print('Best parameters')
         pprint(grid.best_params_)
     else:
-        model = model.fit(x_train, y_train)
+        kfold_results = []
+        for train_idx, val_idx in model_selection.StratifiedKFold().split(x_train, y_train):
+            model = classifier_options[args.classifier]()
+            model.fit(x_train[train_idx], y_train[train_idx])
 
-    print('Test F1', compute_f1(y_test, model.predict(x_test)))
+            val_f1 = compute_f1(y_train[val_idx], model.predict(x_train[val_idx]))
+            print(f'KFold F1 = {val_f1:.3f}')
+            kfold_results.append((val_f1, model))
+
+        f1_scores = [f1 for f1, _ in kfold_results]
+        print(f'KFold F1 statistics = {np.mean(f1_scores):.3f} \pm {np.std(f1_scores):.3f}')
+
+        final_model = classifier_options[args.classifier]()
+        final_model.fit(x_train, y_train)
+
+    print(f'Test F1 = {compute_f1(y_test, final_model.predict(x_test)):.3f}')
 
 
 if __name__ == '__main__':
