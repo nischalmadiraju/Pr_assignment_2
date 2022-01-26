@@ -1,5 +1,6 @@
 from typing import Tuple, Any
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn import model_selection, semi_supervised, metrics, linear_model, svm
@@ -7,11 +8,13 @@ from sklearn import model_selection, semi_supervised, metrics, linear_model, svm
 np.random.seed(42)
 
 
-def load_data() -> Tuple[np.ndarray, np.ndarray]:
-    data = pd.read_csv('creditcard.csv')
+def transform_data(data: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    # Randomly take n rows with class 0, where n is the count of class 1 items.
+    class0_equal = data[data['Class'] == 0].sample(data['Class'].value_counts()[1])
+    equal = pd.concat((data[data['Class'] == 1], class0_equal))
 
-    labels = data['Class']
-    values = data[[f'V{i + 1}' for i in range(28)]]
+    labels = equal['Class']
+    values = equal[[f'V{i + 1}' for i in range(28)]]
 
     return values.to_numpy(), labels.to_numpy()
 
@@ -27,8 +30,15 @@ def evaluate_model(model: Any, x_train: np.ndarray, y_train: np.ndarray, x_test:
     return accuracy, f1
 
 
-def run_experiment(x_train_lab: np.ndarray, x_train_unlab: np.ndarray, y_train_lab: np.ndarray, x_test: np.ndarray,
-                   y_test: np.ndarray) -> Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]]:
+def run_experiment(data: pd.DataFrame) -> Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]]:
+    data, labels = transform_data(data)
+
+    assert (labels == 0).sum() == (labels == 1).sum()
+
+    x_train, x_test, y_train, y_test = model_selection.train_test_split(data, labels, test_size=.2, stratify=labels)
+    x_train_lab, x_train_unlab, y_train_lab, _ = model_selection.train_test_split(x_train, y_train, test_size=.7,
+                                                                                  stratify=y_train)
+
     print('Baseline model')
     baseline = svm.SVC()
     baseline_result = evaluate_model(baseline, x_train_lab, y_train_lab, x_test, y_test)
@@ -53,22 +63,30 @@ def run_experiment(x_train_lab: np.ndarray, x_train_unlab: np.ndarray, y_train_l
 
 def main():
     print('Loading data')
-    data, labels = load_data()
-
-    x_train, x_test, y_train, y_test = model_selection.train_test_split(data, labels, test_size=.2, stratify=labels)
-    x_train_lab, x_train_unlab, y_train_lab, _ = model_selection.train_test_split(x_train, y_train, test_size=.7,
-                                                                                  stratify=y_train)
+    data = pd.read_csv('creditcard.csv')
 
     results = []
-    for i in range(10):
+    for i in range(100):
         print(f'Running experiment {i}')
-        results.append(run_experiment(x_train_lab, x_train_unlab, y_train_lab, x_test, y_test))
-        print('results so far:')
-        print(results)
+        results.append(run_experiment(data))
         print('\n' * 2)
 
     print('All results:')
     print(results)
+
+    results = np.array(results)
+    f1 = results[:, :, 0]
+    acc = results[:, :, 1]
+
+    plt.title('F1-score')
+    plt.boxplot(f1)
+    plt.xticks([1, 2, 3], ['Baseline', 'Semi-supervised', 'Complete'])
+    plt.show()
+
+    plt.title('Accuracy')
+    plt.boxplot(acc)
+    plt.xticks([1, 2, 3], ['Baseline', 'Semi-supervised', 'Complete'])
+    plt.show()
 
 
 if __name__ == '__main__':
