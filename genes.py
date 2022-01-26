@@ -72,10 +72,10 @@ def kmeans(x: np.ndarray, y: np.ndarray) -> float:
     y_pred = clusters.fit_predict(x)
     # Put the result into a color plot
     for i, name in enumerate(unique_clusters):
-        plt.scatter(x[y_pred == i, i], x[y_pred == i, i+1], s=100, label=name)
+        plt.scatter(x[y_pred == i, i], x[y_pred == i, i + 1], s=100, label=name)
     plt.scatter(clusters.cluster_centers_[:, 0], clusters.cluster_centers_[:, 1], s=300, c='gray', label='Centroids')
     plt.show()
-    return metrics.mutual_info_score(y, y_pred) 
+    return metrics.mutual_info_score(y, y_pred)
 
 
 def main():
