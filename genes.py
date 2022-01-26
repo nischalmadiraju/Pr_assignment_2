@@ -6,7 +6,8 @@ from typing import Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn import decomposition, feature_selection, preprocessing, svm, naive_bayes, cluster, metrics, model_selection
+from sklearn import decomposition, feature_selection, preprocessing, svm, naive_bayes, cluster, metrics, \
+    model_selection, neighbors
 from sklearn.metrics import make_scorer
 
 # Set seed for reproducible modeling
@@ -36,6 +37,7 @@ def compute_f1(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 classifier_options = {
     'svm': svm.SVC,
     'naive_bayes': naive_bayes.GaussianNB,
+    'knn': neighbors.KNeighborsClassifier,
 }
 
 grid_options = {
@@ -84,6 +86,10 @@ def kmeans(x: np.ndarray, y: np.ndarray) -> float:
 
 def main():
     args = parse_args()
+
+    if args.classifier == 'knn' and args.grid_search:
+        raise ValueError('Grid search can not be performed for knn')
+
     print('Loading data')
     data, labels = load_data()
 
@@ -102,7 +108,6 @@ def main():
 
     print('Training classifier', args.classifier)
 
-    final_model = None
     if args.grid_search:
         model = classifier_options[args.classifier]()
         print('Performing grid search')
