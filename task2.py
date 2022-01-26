@@ -3,7 +3,8 @@ from typing import Tuple, Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn import model_selection, semi_supervised, metrics, linear_model, svm
+from scipy import stats
+from sklearn import model_selection, semi_supervised, metrics, svm
 
 np.random.seed(42)
 
@@ -68,13 +69,10 @@ def main():
     print(data['Class'].value_counts())
 
     results = []
-    for i in range(100):
+    for i in range(1_000):
         print(f'Running experiment {i}')
         results.append(run_experiment(data))
         print('\n' * 2)
-
-    print('All results:')
-    print(results)
 
     results = np.array(results)
     f1 = results[:, :, 0]
@@ -89,6 +87,9 @@ def main():
     plt.boxplot(acc)
     plt.xticks([1, 2, 3], ['Baseline', 'Semi-supervised', 'Complete'])
     plt.show()
+
+    print('F1', stats.ttest_ind(f1[:, 0], f1[:, 2]))
+    print('Accuracy', stats.ttest_ind(acc[:, 0], acc[:, 2]))
 
 
 if __name__ == '__main__':
