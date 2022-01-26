@@ -15,7 +15,22 @@ from scipy.spatial import distance
 
 from sklearn.neighbors import NearestNeighbors
 
-from Feature_extraction_pipeline import edge_detection, fourier_transform
+
+def edge_detection(img):
+    # Blur the image for better edge detection
+    img_blur = cv2.GaussianBlur(img, (3,3), 0)
+
+    # Canny Edge Detection
+    edges = cv2.Canny(image=img_blur, threshold1=200, threshold2=220)  # Canny Edge Detection
+    return edges
+
+
+def fourier_transform(img):
+    # fourier transform and shift to center
+    fourier_transform_shifted = np.fft.fftshift(np.fft.fft2(np.float32(img), axes=(0,1)))
+    magnitude_spectrum = np.log(np.abs(fourier_transform_shifted)) / 20
+    descriptors = magnitude_spectrum
+    return descriptors
 
 
 def create_dictionary(X_train, k_fold):
@@ -102,8 +117,8 @@ if __name__ == "__main__":
     fourierFeatures = np.zeros((170, 12800), dtype=int)
 
     clustering = 0          # 1 for clustering, 0 for no clustering
-    k_fold = 1              # 1 for k-fold cross-validation, 0 for train-test-split
-    featureExtraction = 2   # 0 for no feature extraction, 1 for SIFT, 2 for Fourier Transform
+    k_fold = 0              # 1 for k-fold cross-validation, 0 for train-test-split
+    featureExtraction = 1   # 0 for no feature extraction, 1 for SIFT, 2 for Fourier Transform
 
     silhouette = 1
     idx = 0
@@ -119,8 +134,7 @@ if __name__ == "__main__":
 
                 if clustering == 1:
                     displayImage = cv2.resize(image, (50, 50))  # dimension reduction, otherwise silhouette score
-                    #clusterImage = clusterImage.flatten()       # takes too long
-                    clusterImage = displayImage.reshape(-1, 3)
+                    clusterImage = displayImage.reshape(-1, 3)  # takes too long
 
                     #neigh = NearestNeighbors(n_neighbors=3)    # This can be uncommented to determine the value of eps
                     #nbrs = neigh.fit(clusterImage)
