@@ -67,16 +67,15 @@ def parse_args() -> argparse.Namespace:
 
 
 def kmeans(x: np.ndarray, y: np.ndarray) -> float:
-    n_clusters = len(np.unique(y))
-    kmeans = cluster.KMeans(n_clusters=n_clusters, random_state=0)
-    y_pred = kmeans.fit_predict(x)
+    unique_clusters = np.unique(y)
+    clusters = cluster.KMeans(n_clusters=len(unique_clusters), random_state=0)
+    y_pred = clusters.fit_predict(x)
     # Put the result into a color plot
-    colors = ['pink','green','blue','yellow', 'purple']
-    for i in range(n_clusters):
-        plt.scatter(x[y_pred == i, i], x[y_pred == i, i+1], s=100, c=colors[i], label='Cluster {}'.format(i))
-    plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], s=300, c='red', label='Centroids')
+    for i, name in enumerate(unique_clusters):
+        plt.scatter(x[y_pred == i, i], x[y_pred == i, i+1], s=100, label=name)
+    plt.scatter(clusters.cluster_centers_[:, 0], clusters.cluster_centers_[:, 1], s=300, c='gray', label='Centroids')
     plt.show()
-    return metrics.mutual_info_score(y, y_pred)
+    return metrics.mutual_info_score(y, y_pred) 
 
 
 def main():
