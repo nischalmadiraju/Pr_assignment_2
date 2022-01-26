@@ -101,3 +101,4 @@ modules.xml
 
 venv
 *.csv
+Data/*
