@@ -12,13 +12,14 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import DBSCAN
 from scipy.spatial import distance
+from sklearn.model_selection import GridSearchCV
 
 from sklearn.neighbors import NearestNeighbors
 
 
 def edge_detection(img):
     # Blur the image for better edge detection
-    img_blur = cv2.GaussianBlur(img, (3,3), 0)
+    img_blur = cv2.GaussianBlur(img, (3, 3), 0)
 
     # Canny Edge Detection
     edges = cv2.Canny(image=img_blur, threshold1=200, threshold2=220)  # Canny Edge Detection
@@ -27,7 +28,7 @@ def edge_detection(img):
 
 def fourier_transform(img):
     # fourier transform and shift to center
-    fourier_transform_shifted = np.fft.fftshift(np.fft.fft2(np.float32(img), axes=(0,1)))
+    fourier_transform_shifted = np.fft.fftshift(np.fft.fft2(np.float32(img), axes=(0, 1)))
     magnitude_spectrum = np.log(np.abs(fourier_transform_shifted)) / 20
     descriptors = magnitude_spectrum
     return descriptors
@@ -48,10 +49,10 @@ def create_dictionary(X_train, k_fold):
         for i in range(10):
             dictionary[idx] = descriptors[i]
             idx += 1
-        
+
     return dictionary
-    
-    
+
+
 def calculate_feature_vectors(X_train, X_test):
     trainDataFeatures = []
     sift = cv2.SIFT_create()
@@ -87,8 +88,8 @@ def calculate_feature_vectors(X_train, X_test):
         testDataFeatures.append(imageFeatures)
 
     return trainDataFeatures, testDataFeatures
-    
-    
+
+
 def do_classification(X_train, y_train, X_test, y_test, model):
     accuracy = 0
     if model == 0:
@@ -106,9 +107,46 @@ def do_classification(X_train, y_train, X_test, y_test, model):
         logisticRegression.fit(X_train, y_train)
         logisticRegressionPredictions = logisticRegression.predict(X_test)
         accuracy = metrics.accuracy_score(y_test, logisticRegressionPredictions)
-        
+
     return accuracy
-    
+
+
+def do_grid_search(X_train, y_train):
+    KNN_hyperparameter_space = {'n_neighbors': [2, 3, 4, 5, 6, 7, 8, 9, 10],
+                                'algorithm': ['ball_tree', 'kd_tree', 'brute'],
+                                'p': [1, 2, 3]}
+
+    RF_hyperparameter_space = {'n_estimators': [5, 10, 25, 50, 100],
+                               'criterion': ["gini", "entropy"],
+                               'max_depth': [10, 50, 100, None],
+                               'min_samples_split': [2, 3, 4, 5, 10],
+                               'min_samples_leaf': [1, 2, 3, 4, 5],
+                               'max_features': ["auto", "log2", None],
+                               'bootstrap': [True, False]}
+
+    LR_hyperparameter_space = {'tol': [0.01, 0.001],
+                               'C': [0.5, 1.0, 1.5]}
+
+    KNN = KNeighborsClassifier(n_jobs=-1)
+    KNNGridSearch = GridSearchCV(KNN, param_grid=KNN_hyperparameter_space, scoring='accuracy', n_jobs=-1, cv=3)
+    KNNGridSearch.fit(X_train, y_train)
+    print("Optimal KNN hyperparameter combination:", KNNGridSearch.best_params_)
+    print("Mean cross-validated training accuracy score:", KNNGridSearch.best_score_)
+
+    randomForest = RandomForestClassifier(n_jobs=4)
+    RFGridSearch = GridSearchCV(randomForest, param_grid=RF_hyperparameter_space, scoring='accuracy', cv=3, n_jobs=4)
+    RFGridSearch.fit(X_train, y_train)
+    print("Optimal Random Forest hyperparameter combination:", RFGridSearch.best_params_)
+    print("Mean cross-validated training accuracy score:", RFGridSearch.best_score_)
+
+    logisticRegression = LogisticRegression(max_iter=10000, solver='lbfgs', penalty='l2', n_jobs=4)
+    LRGridSearch = GridSearchCV(logisticRegression, param_grid=LR_hyperparameter_space, scoring='accuracy', cv=3, n_jobs=4)
+    LRGridSearch.fit(X_train, y_train)
+    print("Optimal Logistic Regression hyperparameter combination:", LRGridSearch.best_params_)
+    print("Mean cross-validated training accuracy score:", LRGridSearch.best_score_)
+
+    return
+
 
 if __name__ == "__main__":
     directory = os.fsencode('Data/BigCats')
@@ -116,14 +154,15 @@ if __name__ == "__main__":
     dataLabels = []
     fourierFeatures = np.zeros((170, 12800), dtype=int)
 
-    clustering = 0          # 1 for clustering, 0 for no clustering
-    k_fold = 0              # 1 for k-fold cross-validation, 0 for train-test-split
-    featureExtraction = 1   # 0 for no feature extraction, 1 for SIFT, 2 for Fourier Transform
+    clustering = 0  # 1 for clustering, 0 for no clustering
+    k_fold = 0  # 1 for k-fold cross-validation, 0 for train-test-split
+    featureExtraction = 2  # 0 for no feature extraction, 1 for SIFT, 2 for Fourier Transform
+    gridSearch = 1  # 1 for grid search, 0 for no grid search
 
-    silhouette = 1
+    silhouette = 0
     idx = 0
 
-    #  Preprocessing
+    # Preprocessing
     for label in os.listdir(directory):
         subdirectory = os.path.join(directory, label)
         for file in os.listdir(subdirectory):
@@ -136,18 +175,18 @@ if __name__ == "__main__":
                     displayImage = cv2.resize(image, (50, 50))  # dimension reduction, otherwise silhouette score
                     clusterImage = displayImage.reshape(-1, 3)  # takes too long
 
-                    #neigh = NearestNeighbors(n_neighbors=3)    # This can be uncommented to determine the value of eps
-                    #nbrs = neigh.fit(clusterImage)
-                    #distances, indices = nbrs.kneighbors(clusterImage)
-                    #distances = np.sort(distances, axis=0)
-                    #distances = distances[:, 1]
-                    #plt.plot(distances)
-                    #plt.show()
+                    # neigh = NearestNeighbors(n_neighbors=10)    # This can be uncommented to determine the value of eps
+                    # nbrs = neigh.fit(clusterImage)
+                    # distances, indices = nbrs.kneighbors(clusterImage)
+                    # distances = np.sort(distances, axis=0)
+                    # distances = distances[:, 1]
+                    # plt.plot(distances)
+                    # plt.show()
 
                     db = DBSCAN(eps=4.5, min_samples=10).fit(clusterImage[:, :2])
 
-                    #plt.imshow(np.uint8(db.labels_.reshape(displayImage.shape[:2]))) # This can be uncommented to see
-                    #plt.show()                                                       # the clustered image
+                    # plt.imshow(np.uint8(db.labels_.reshape(displayImage.shape[:2]))) # This can be uncommented to see
+                    # plt.show()                                                       # the clustered image
 
                     silhouette += silhouette_score(clusterImage, db.labels_)
 
@@ -169,11 +208,11 @@ if __name__ == "__main__":
                         dataImages[idx, i] = gray[i]
 
                 idx += 1
-                
+
             else:
                 continue
     if clustering == 1:
-        print("Mean silhouette score:", silhouette/170)
+        print("Mean silhouette score:", silhouette / 170)
 
     if k_fold == 1:
         dataLabels = np.array(dataLabels)
@@ -197,16 +236,21 @@ if __name__ == "__main__":
             randomForestAccuracy += do_classification(X_train, y_train, X_test, y_test, 1)
             logisticRegressionAccuracy += do_classification(X_train, y_train, X_test, y_test, 2)
 
-        print("Mean accuracy for KNN:", KNNAccuracy/3)
-        print("Mean accuracy for Random Forest:", randomForestAccuracy/3)
-        print("Mean accuracy for Logistic Regression:", logisticRegressionAccuracy/3)
-                
+        print("Mean accuracy for KNN:", KNNAccuracy / 3)
+        print("Mean accuracy for Random Forest:", randomForestAccuracy / 3)
+        print("Mean accuracy for Logistic Regression:", logisticRegressionAccuracy / 3)
+
     else:
         X_train, X_test, y_train, y_test = train_test_split(dataImages, dataLabels, random_state=9)
 
         if featureExtraction == 1:
             dictionary = create_dictionary(X_train, k_fold)  # Create keypoint dictionary using only the training data
-            X_train, X_test = calculate_feature_vectors(X_train, X_test) # Calculate feature vectors
+            X_train, X_test = calculate_feature_vectors(X_train, X_test)  # Calculate feature vectors
+
+        if gridSearch == 1:
+            X_train = np.r_[X_train, X_test]
+            y_train = np.r_[y_train, y_test]
+            do_grid_search(X_train, y_train)
 
         # Classification
         print("Accuracy for KNN:", do_classification(X_train, y_train, X_test, y_test, 0))
