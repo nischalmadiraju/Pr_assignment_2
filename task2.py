@@ -26,8 +26,7 @@ def evaluate_model(model: Any, x_train: np.ndarray, y_train: np.ndarray, x_test:
     y_pred = model.predict(x_test)
     accuracy = metrics.accuracy_score(y_test, y_pred)
     f1 = metrics.f1_score(y_test, y_pred)
-    # print(metrics.confusion_matrix(y_test, y_pred))
-    print(f'{f1=:.3f}\t{accuracy=:.3f}')
+    print(f'f1={f1:.3f}\taccuracy={accuracy:.3f}')
     return accuracy, f1
 
 
