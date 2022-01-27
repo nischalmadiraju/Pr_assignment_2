@@ -64,7 +64,7 @@ def run_experiment(data: pd.DataFrame) -> Tuple[Tuple[float, float], Tuple[float
 
 def main():
     print('Loading data')
-    data = pd.read_csv('creditcard.csv')
+    data = pd.read_csv('Data/creditcard.csv')
 
     print(data['Class'].value_counts())
 

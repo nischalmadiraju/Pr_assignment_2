@@ -1,5 +1,4 @@
 import argparse
-import operator
 from pprint import pprint
 from typing import Tuple
 
@@ -52,8 +51,8 @@ grid_options = {
 
 
 def load_data() -> Tuple[np.ndarray, np.ndarray]:
-    data = pd.read_csv('data.csv', index_col=0)
-    labels = pd.read_csv('labels.csv', index_col=0)
+    data = pd.read_csv('Data/genes/data.csv', index_col=0)
+    labels = pd.read_csv('Data/genes/labels.csv', index_col=0)
 
     print('Data shape', data.shape)
 
